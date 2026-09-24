@@ -1,0 +1,6 @@
+{
+  "name": "EBMD Tracker - Corneal Dystrophy & Eye Care Log",
+  "description": "Calm, one-handed tracker for Epithelial Basement Membrane Dystrophy (EBMD/Map-Dot-Fingerprint) episodes, daily drops/ointment routines, adherence trends, costs, and doctor appointment reports.",
+  "requestFramePermissions": ["notifications"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
