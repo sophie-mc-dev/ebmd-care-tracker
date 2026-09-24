@@ -16,31 +16,103 @@
   }
 }
 
+/* Eye-comfort soft focus ring */
+*:focus-visible {
+  outline: 2px solid #0d9488;
+  outline-offset: 2px;
+}
+
 @media print {
-  body {
-    background-color: #ffffff !important;
-    color: #000000 !important;
+  @page {
+    margin: 12mm;
+    size: auto;
   }
 
+  html,
+  body {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    height: auto !important;
+    min-height: auto !important;
+    overflow: visible !important;
+  }
+
+  /* Hide app shell elements when printing */
   header,
   nav,
-  button:not(.print-include),
+  main,
+  button,
   .print\:hidden {
     display: none !important;
+  }
+
+  /* Unconstrain report modal elements for multi-page print */
+  .report-modal-backdrop {
+    position: static !important;
+    display: block !important;
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    max-height: none !important;
+    height: auto !important;
+    overflow: visible !important;
+    backdrop-filter: none !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  .report-modal-card {
+    position: static !important;
+    display: block !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    max-height: none !important;
+    height: auto !important;
+    overflow: visible !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
   }
 
   #doctor-report-printable {
     display: block !important;
     position: static !important;
     max-height: none !important;
+    height: auto !important;
     overflow: visible !important;
     padding: 0 !important;
     margin: 0 !important;
+    color: #000000 !important;
+    background: #ffffff !important;
+    background-color: #ffffff !important;
   }
-}
 
-/* Eye-comfort soft focus ring */
-*:focus-visible {
-  outline: 2px solid #0d9488;
-  outline-offset: 2px;
+  /* Ensure text inside printable report is dark and legible */
+  #doctor-report-printable * {
+    color-scheme: light !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Prevent awkward page breaks */
+  .print-avoid-break,
+  tr,
+  .break-inside-avoid {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  table {
+    page-break-inside: auto;
+  }
+
+  thead {
+    display: table-header-group;
+  }
 }

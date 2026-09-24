@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShieldCheck, Moon, Sun, Settings, FileText, Zap } from 'lucide-react';
+import { Moon, Sun, FileText } from 'lucide-react';
 import { PWAInstallButton } from './PWAInstallButton';
 import { AppSettings } from '../types/ebmd';
 
@@ -8,8 +8,8 @@ interface HeaderProps {
   isDark?: boolean;
   onToggleTheme: () => void;
   onOpenReport: () => void;
-  onOpenSettings: () => void;
-  onQuickEpisode: () => void;
+  onOpenSettings?: () => void;
+  onQuickEpisode?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -17,8 +17,6 @@ export const Header: React.FC<HeaderProps> = ({
   isDark,
   onToggleTheme,
   onOpenReport,
-  onOpenSettings,
-  onQuickEpisode,
 }) => {
   const effectiveIsDark = isDark !== undefined ? isDark : settings.theme === 'dark';
   return (
@@ -74,15 +72,6 @@ export const Header: React.FC<HeaderProps> = ({
             ) : (
               <Moon className="w-4 h-4 text-slate-600 dark:text-slate-300" />
             )}
-          </button>
-
-          {/* Settings / Backup */}
-          <button
-            onClick={onOpenSettings}
-            className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition active:scale-95 min-h-[38px] min-w-[38px] flex items-center justify-center"
-            title="Preferences & Backup"
-          >
-            <Settings className="w-4 h-4" />
           </button>
         </div>
       </div>

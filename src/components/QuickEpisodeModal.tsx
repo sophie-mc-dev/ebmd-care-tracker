@@ -8,8 +8,6 @@ import {
   Zap,
   ShieldAlert,
   Sparkles,
-  Mic,
-  MicOff,
   Camera,
   Image as ImageIcon,
   Trash2,
@@ -25,11 +23,6 @@ import { getSeverityLabel, getEyeLabel } from '../utils/storage';
 import { sound } from '../utils/audio';
 import { compressImageFile, savePhotoToDB, getPhotoFromDB } from '../utils/indexedDB';
 import { fetchCurrentWeather, WeatherData } from '../utils/weather';
-import {
-  createSpeechRecognizer,
-  isSpeechRecognitionSupported,
-  parseVoiceTranscript,
-} from '../utils/speech';
 
 interface QuickEpisodeModalProps {
   isOpen: boolean;
@@ -95,11 +88,6 @@ export const QuickEpisodeModal: React.FC<QuickEpisodeModalProps> = ({
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [isFetchingWeather, setIsFetchingWeather] = useState(false);
   const [manualHumidity, setManualHumidity] = useState<string>('');
-
-  // Voice recognition state
-  const [isListening, setIsListening] = useState(false);
-  const [voiceNotice, setVoiceNotice] = useState<string | null>(null);
-  const speechRecognizerRef = useRef<{ start: () => void; stop: () => void } | null>(null);
 
   // Auto-fetch weather on mount/open
   useEffect(() => {
@@ -180,54 +168,6 @@ export const QuickEpisodeModal: React.FC<QuickEpisodeModalProps> = ({
       if (soundEnabled) sound.playGentleBeep(600, 0.08);
     } catch (err) {
       console.error('Photo compression error:', err);
-    }
-  };
-
-  // Toggle Voice Recognition
-  const handleToggleVoice = () => {
-    if (!isSpeechRecognitionSupported()) {
-      alert('Speech Recognition is not supported by this browser. Please type notes manually.');
-      return;
-    }
-
-    if (isListening) {
-      speechRecognizerRef.current?.stop();
-      setIsListening(false);
-      return;
-    }
-
-    if (soundEnabled) sound.playGentleBeep(700, 0.1);
-    setIsListening(true);
-    setVoiceNotice('Listening... speak clearly (e.g. "Sharp pain, level 4, left eye, waking up")');
-
-    const recognizer = createSpeechRecognizer(
-      (transcript, isFinal) => {
-        if (isFinal) {
-          const parsed = parseVoiceTranscript(transcript);
-          if (parsed.severity) setSeverity(parsed.severity as any);
-          if (parsed.eye) setEye(parsed.eye);
-          if (parsed.symptoms.length > 0) setSymptoms(parsed.symptoms);
-          if (parsed.trigger) setTrigger(parsed.trigger);
-
-          // Append to notes
-          setNotes((prev) => (prev ? `${prev} | Spoken: "${transcript}"` : transcript));
-          setVoiceNotice(`Transcribed: "${transcript}"`);
-          if (soundEnabled) sound.playGentleBeep(880, 0.12);
-        }
-      },
-      (err) => {
-        console.warn('Speech error:', err);
-        setVoiceNotice('Voice recognition ended or timed out.');
-        setIsListening(false);
-      },
-      () => {
-        setIsListening(false);
-      }
-    );
-
-    if (recognizer) {
-      speechRecognizerRef.current = recognizer;
-      recognizer.start();
     }
   };
 
@@ -341,43 +281,15 @@ export const QuickEpisodeModal: React.FC<QuickEpisodeModalProps> = ({
           </div>
 
           <div className="flex items-center gap-1.5">
-            {/* Voice-to-Log Quick Button */}
-            <button
-              type="button"
-              onClick={handleToggleVoice}
-              className={`p-2 rounded-xl transition flex items-center gap-1 text-xs font-bold ${
-                isListening
-                  ? 'bg-rose-600 text-white animate-pulse ring-2 ring-rose-400'
-                  : 'bg-teal-500/10 text-teal-700 dark:text-teal-300 hover:bg-teal-500/20'
-              }`}
-              title="Speak to log (Voice dictation)"
-            >
-              {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-              <span className="hidden sm:inline">{isListening ? 'Listening...' : 'Voice'}</span>
-            </button>
-
             <button
               onClick={onClose}
               className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+              aria-label="Close modal"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
         </div>
-
-        {/* Voice Feedback Banner */}
-        {voiceNotice && (
-          <div className="px-5 py-2 bg-teal-50 dark:bg-teal-950/60 border-b border-teal-500/20 text-xs text-teal-800 dark:text-teal-200 flex items-center justify-between">
-            <span className="truncate">{voiceNotice}</span>
-            <button
-              type="button"
-              onClick={() => setVoiceNotice(null)}
-              className="ml-2 text-slate-400 hover:text-slate-600"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        )}
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="overflow-y-auto p-5 space-y-4 text-sm">

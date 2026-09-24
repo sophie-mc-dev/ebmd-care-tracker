@@ -174,36 +174,8 @@ export const TodayDashboard: React.FC<TodayDashboardProps> = ({
         )}
       </div>
 
-      {/* Quick Action Buttons: Daily Treatment & Acute Episode */}
+      {/* Quick Action Buttons: Acute Episode & Daily Treatment */}
       <div className="grid grid-cols-2 gap-2.5">
-        {/* Treatment: Daily Care */}
-        <button
-          type="button"
-          onClick={() => {
-            if (soundEnabled) sound.playGentleBeep(520, 0.04);
-            onOpenQuickTreatment();
-          }}
-          className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3.5 sm:p-4 rounded-2xl bg-teal-600 hover:bg-teal-700 active:scale-[0.98] text-white shadow-md shadow-teal-600/20 transition min-h-[68px] sm:min-h-[58px]"
-        >
-          <div className="flex items-center gap-2.5 sm:gap-3 text-left w-full sm:w-auto">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
-              <Droplets className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="text-xs sm:text-sm font-bold flex items-center gap-1.5 leading-tight">
-                <span>Log Treatment</span>
-                <span className="text-[9px] sm:text-[10px] uppercase font-bold bg-white/20 px-1.5 py-0.5 rounded tracking-wide">
-                  Daily
-                </span>
-              </div>
-              <div className="text-[11px] sm:text-xs text-teal-100 font-normal mt-0.5 truncate sm:whitespace-normal">
-                Drops, gel, ointment
-              </div>
-            </div>
-          </div>
-          <Plus className="hidden sm:block w-4 h-4 sm:w-5 sm:h-5 text-teal-200 flex-shrink-0 ml-1" />
-        </button>
-
         {/* Episode: Acute Flare-Up */}
         <button
           type="button"
@@ -230,6 +202,34 @@ export const TodayDashboard: React.FC<TodayDashboardProps> = ({
             </div>
           </div>
           <Plus className="hidden sm:block w-4 h-4 sm:w-5 sm:h-5 text-rose-200 flex-shrink-0 ml-1" />
+        </button>
+
+        {/* Treatment: Daily Care */}
+        <button
+          type="button"
+          onClick={() => {
+            if (soundEnabled) sound.playGentleBeep(520, 0.04);
+            onOpenQuickTreatment();
+          }}
+          className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3.5 sm:p-4 rounded-2xl bg-teal-600 hover:bg-teal-700 active:scale-[0.98] text-white shadow-md shadow-teal-600/20 transition min-h-[68px] sm:min-h-[58px]"
+        >
+          <div className="flex items-center gap-2.5 sm:gap-3 text-left w-full sm:w-auto">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
+              <Droplets className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-xs sm:text-sm font-bold flex items-center gap-1.5 leading-tight">
+                <span>Log Treatment</span>
+                <span className="text-[9px] sm:text-[10px] uppercase font-bold bg-white/20 px-1.5 py-0.5 rounded tracking-wide">
+                  Daily
+                </span>
+              </div>
+              <div className="text-[11px] sm:text-xs text-teal-100 font-normal mt-0.5 truncate sm:whitespace-normal">
+                Drops, gel, ointment
+              </div>
+            </div>
+          </div>
+          <Plus className="hidden sm:block w-4 h-4 sm:w-5 sm:h-5 text-teal-200 flex-shrink-0 ml-1" />
         </button>
       </div>
 

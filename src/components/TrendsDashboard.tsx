@@ -51,8 +51,16 @@ export const TrendsDashboard: React.FC<TrendsDashboardProps> = ({ episodes, trea
     if (timeframe === '30d') minTime = now - 30 * 24 * 60 * 60 * 1000;
     else if (timeframe === '90d') minTime = now - 90 * 24 * 60 * 60 * 1000;
 
-    const ep = episodes.filter((e) => new Date(e.timestamp).getTime() >= minTime);
-    const tr = treatments.filter((t) => new Date(t.timestamp).getTime() >= minTime);
+    const ep = episodes.filter((item) => {
+      if (timeframe === 'all') return true;
+      const time = new Date(item.timestamp).getTime();
+      return !isNaN(time) && time >= minTime;
+    });
+    const tr = treatments.filter((item) => {
+      if (timeframe === 'all') return true;
+      const time = new Date(item.timestamp).getTime();
+      return !isNaN(time) && time >= minTime;
+    });
     return { episodes: ep, treatments: tr };
   }, [episodes, treatments, timeframe]);
 
@@ -100,7 +108,7 @@ export const TrendsDashboard: React.FC<TrendsDashboardProps> = ({ episodes, trea
 
   // 2. Weekly / Monthly Episodes & Skipped correlation bars
   const weeklyTrend = useMemo(() => {
-    const weeksCount = timeframe === '30d' ? 4 : timeframe === '90d' ? 12 : 12;
+    const now = new Date();
     const weeks: {
       label: string;
       episodesCount: number;
@@ -109,32 +117,115 @@ export const TrendsDashboard: React.FC<TrendsDashboardProps> = ({ episodes, trea
       adherence: number;
     }[] = [];
 
-    const now = new Date();
-    for (let i = weeksCount - 1; i >= 0; i--) {
-      const end = new Date(now.getTime() - i * 7 * 24 * 60 * 60 * 1000);
-      const start = new Date(end.getTime() - 7 * 24 * 60 * 60 * 1000);
+    if (timeframe === '30d') {
+      const weeksCount = 4;
+      for (let i = weeksCount - 1; i >= 0; i--) {
+        const start = i === weeksCount - 1
+          ? new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+          : new Date(now.getTime() - (i + 1) * 7 * 24 * 60 * 60 * 1000);
+        const end = i === 0
+          ? new Date(now.getTime() + 24 * 60 * 60 * 1000)
+          : new Date(now.getTime() - i * 7 * 24 * 60 * 60 * 1000);
 
-      const ep = activeEpisodes.filter((e) => {
-        const t = new Date(e.timestamp).getTime();
-        return t >= start.getTime() && t < end.getTime();
-      });
+        const ep = activeEpisodes.filter((e) => {
+          const t = new Date(e.timestamp).getTime();
+          return t >= start.getTime() && t < end.getTime();
+        });
 
-      const tr = activeTreatments.filter((t) => {
-        const time = new Date(t.timestamp).getTime();
-        return time >= start.getTime() && time < end.getTime();
-      });
+        const tr = activeTreatments.filter((t) => {
+          const time = new Date(t.timestamp).getTime();
+          return time >= start.getTime() && time < end.getTime();
+        });
 
-      const used = tr.filter((t) => !t.skipped).length;
-      const skipped = tr.filter((t) => t.skipped).length;
-      const adh = tr.length > 0 ? Math.round((used / tr.length) * 100) : 100;
+        const used = tr.filter((t) => !t.skipped).length;
+        const skipped = tr.filter((t) => t.skipped).length;
+        const adh = tr.length > 0 ? Math.round((used / tr.length) * 100) : 100;
 
-      weeks.push({
-        label: `W${weeksCount - i}`,
-        episodesCount: ep.length,
-        skippedCount: skipped,
-        usedCount: used,
-        adherence: adh,
-      });
+        weeks.push({
+          label: i === 0 ? 'Recent' : `W${weeksCount - i}`,
+          episodesCount: ep.length,
+          skippedCount: skipped,
+          usedCount: used,
+          adherence: adh,
+        });
+      }
+    } else if (timeframe === '90d') {
+      const periodsCount = 6;
+      for (let i = periodsCount - 1; i >= 0; i--) {
+        const start = i === periodsCount - 1
+          ? new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000)
+          : new Date(now.getTime() - (i + 1) * 15 * 24 * 60 * 60 * 1000);
+        const end = i === 0
+          ? new Date(now.getTime() + 24 * 60 * 60 * 1000)
+          : new Date(now.getTime() - i * 15 * 24 * 60 * 60 * 1000);
+
+        const ep = activeEpisodes.filter((e) => {
+          const t = new Date(e.timestamp).getTime();
+          return t >= start.getTime() && t < end.getTime();
+        });
+
+        const tr = activeTreatments.filter((t) => {
+          const time = new Date(t.timestamp).getTime();
+          return time >= start.getTime() && time < end.getTime();
+        });
+
+        const used = tr.filter((t) => !t.skipped).length;
+        const skipped = tr.filter((t) => t.skipped).length;
+        const adh = tr.length > 0 ? Math.round((used / tr.length) * 100) : 100;
+
+        weeks.push({
+          label: i === 0 ? 'Recent' : `P${periodsCount - i}`,
+          episodesCount: ep.length,
+          skippedCount: skipped,
+          usedCount: used,
+          adherence: adh,
+        });
+      }
+    } else {
+      // 'all' timeframe: Dynamically cover all saved history
+      let earliestTime = now.getTime() - 90 * 24 * 60 * 60 * 1000;
+      if (activeEpisodes.length > 0) {
+        const oldestEp = Math.min(...activeEpisodes.map((e) => new Date(e.timestamp).getTime()));
+        if (!isNaN(oldestEp) && oldestEp < earliestTime) earliestTime = oldestEp;
+      }
+      if (activeTreatments.length > 0) {
+        const oldestTr = Math.min(...activeTreatments.map((t) => new Date(t.timestamp).getTime()));
+        if (!isNaN(oldestTr) && oldestTr < earliestTime) earliestTime = oldestTr;
+      }
+
+      const totalSpanDays = Math.max(Math.ceil((now.getTime() - earliestTime) / (24 * 60 * 60 * 1000)), 30);
+      const bucketCount = totalSpanDays > 90 ? Math.min(Math.ceil(totalSpanDays / 30), 6) : 4;
+      const bucketDurationMs = (now.getTime() - earliestTime) / bucketCount;
+
+      for (let i = 0; i < bucketCount; i++) {
+        const start = i === 0 ? 0 : earliestTime + i * bucketDurationMs;
+        const end = i === bucketCount - 1 ? Infinity : earliestTime + (i + 1) * bucketDurationMs;
+
+        const ep = activeEpisodes.filter((e) => {
+          const t = new Date(e.timestamp).getTime();
+          return t >= start && t < end;
+        });
+
+        const tr = activeTreatments.filter((t) => {
+          const time = new Date(t.timestamp).getTime();
+          return time >= start && time < end;
+        });
+
+        const used = tr.filter((t) => !t.skipped).length;
+        const skipped = tr.filter((t) => t.skipped).length;
+        const adh = tr.length > 0 ? Math.round((used / tr.length) * 100) : 100;
+
+        const bucketDate = new Date(earliestTime + (i + 0.5) * bucketDurationMs);
+        const monthLabel = bucketDate.toLocaleDateString(undefined, { month: 'short' });
+
+        weeks.push({
+          label: monthLabel || `M${i + 1}`,
+          episodesCount: ep.length,
+          skippedCount: skipped,
+          usedCount: used,
+          adherence: adh,
+        });
+      }
     }
 
     return weeks;
@@ -319,24 +410,26 @@ export const TrendsDashboard: React.FC<TrendsDashboardProps> = ({ episodes, trea
   return (
     <div className="space-y-6 pb-24 max-w-2xl mx-auto px-4 sm:px-0">
       {/* Header and Timeframe Filter */}
-      <div className="flex items-center justify-between bg-white dark:bg-slate-900 p-4 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-4 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
         <div>
           <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
             <TrendingUp className="w-5 h-5 text-teal-600 dark:text-teal-400" />
             <span>Corneal Trends & Insights</span>
           </h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            Adherence patterns and episode frequency
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            {timeframe === '30d' && `Past 30 days • ${metrics.totalEpisodes} ${metrics.totalEpisodes === 1 ? 'episode' : 'episodes'}`}
+            {timeframe === '90d' && `Past 90 days • ${metrics.totalEpisodes} ${metrics.totalEpisodes === 1 ? 'episode' : 'episodes'}`}
+            {timeframe === 'all' && `All saved history • ${metrics.totalEpisodes} ${metrics.totalEpisodes === 1 ? 'episode' : 'episodes'}`}
           </p>
         </div>
 
         {/* Timeframe selector */}
-        <div className="flex rounded-xl bg-slate-100 dark:bg-slate-800 p-1 text-xs">
+        <div className="flex rounded-xl bg-slate-100 dark:bg-slate-800 p-1 text-xs self-start sm:self-auto">
           {(
             [
-              { id: '30d', label: '30D' },
-              { id: '90d', label: '90D' },
-              { id: 'all', label: 'All' },
+              { id: '30d', label: '30 Days' },
+              { id: '90d', label: '90 Days' },
+              { id: 'all', label: 'All Days' },
             ] as const
           ).map((t) => (
             <button
@@ -345,7 +438,7 @@ export const TrendsDashboard: React.FC<TrendsDashboardProps> = ({ episodes, trea
               className={`px-3 py-1.5 rounded-lg font-bold transition ${
                 timeframe === t.id
                   ? 'bg-white dark:bg-slate-700 text-teal-700 dark:text-teal-300 shadow-sm'
-                  : 'text-slate-600 dark:text-slate-400'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
               {t.label}

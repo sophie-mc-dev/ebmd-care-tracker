@@ -16,6 +16,7 @@ import {
   Trash2,
   Check,
   Tag,
+  FileText,
 } from 'lucide-react';
 import {
   ReminderSetting,
@@ -47,6 +48,7 @@ interface SettingsHubProps {
   onSaveExpense: (expense: ExpenseItem) => void;
   onDeleteExpense: (id: string) => void;
   onDataReset: () => void;
+  onOpenReport?: () => void;
 }
 
 export const SettingsHub: React.FC<SettingsHubProps> = ({
@@ -61,6 +63,7 @@ export const SettingsHub: React.FC<SettingsHubProps> = ({
   onSaveExpense,
   onDeleteExpense,
   onDataReset,
+  onOpenReport,
 }) => {
   const [activeSection, setActiveSection] = useState<SettingsSection>(defaultSection);
   const [backupStatus, setBackupStatus] = useState<string | null>(null);
@@ -270,6 +273,19 @@ export const SettingsHub: React.FC<SettingsHubProps> = ({
                   />
                 </div>
               </div>
+
+              {onOpenReport && (
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={onOpenReport}
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/40 dark:hover:bg-teal-900/50 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800/60 text-xs font-bold transition shadow-xs"
+                  >
+                    <FileText className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+                    <span>Generate Clinical PDF Report</span>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 

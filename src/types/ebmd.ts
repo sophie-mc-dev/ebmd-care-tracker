@@ -36,6 +36,8 @@ export type SkipReason =
   | 'travel_away'
   | 'other';
 
+export type ReportRange = '30d' | '60d' | '90d' | '180d' | 'all';
+
 export interface EpisodeLog {
   id: string;
   timestamp: string; // ISO 8601 string

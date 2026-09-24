@@ -168,7 +168,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   configuredProducts: DEFAULT_COMMON_PRODUCTS,
 };
 
-// Generates a realistic 30-day baseline dataset for new users
+// Generates a realistic multi-month baseline dataset (120 days) spanning 30d, 90d, and all-time history
 export function generateSampleData(): {
   episodes: EpisodeLog[];
   treatments: TreatmentLog[];
@@ -179,14 +179,17 @@ export function generateSampleData(): {
   const treatments: TreatmentLog[] = [];
   const expenses: ExpenseItem[] = [];
 
-  // Generate realistic 28-day routine
-  for (let d = 27; d >= 0; d--) {
+  // Generate realistic 120-day daily regimen
+  for (let d = 119; d >= 0; d--) {
     const dayDate = new Date(now.getTime() - d * 24 * 60 * 60 * 1000);
     const dateStr = dayDate.toISOString().split('T')[0];
 
-    // Simulate 3 missed night ointment days
-    const missedNight = d === 21 || d === 12 || d === 4;
-    const missedLunch = d === 18 || d === 9 || d === 2;
+    // Missed night ointment on select days directly correlating with flare-ups
+    const missedNight = d === 4 || d === 12 || d === 21 || d === 43 || d === 83 || d === 106;
+    const missedLunch = d === 2 || d === 9 || d === 18 || d === 35 || d === 54 || d === 77 || d === 95 || d === 112;
+
+    // Daily screen time sample log (between 4 and 10 hours)
+    const screenHours = d % 7 === 0 || d % 7 === 6 ? 4 : (d % 3 === 0 ? 8.5 : 6);
 
     // Morning drops
     treatments.push({
@@ -210,7 +213,7 @@ export function generateSampleData(): {
       anchor: 'after_lunch',
       skipped: missedLunch,
       skipReason: missedLunch ? 'out_of_supply' : undefined,
-      notes: missedLunch ? 'Left vial in car' : undefined,
+      notes: missedLunch ? 'Left vial in bag' : undefined,
     });
 
     // Night ointment
@@ -223,44 +226,34 @@ export function generateSampleData(): {
       anchor: 'before_bed',
       skipped: missedNight,
       skipReason: missedNight ? 'fell_asleep_early' : undefined,
-      notes: missedNight ? 'Exhausted, fell asleep without ointment' : '1/4 inch ribbon into lower fornix',
+      screenTimeHours: screenHours,
+      notes: missedNight ? 'Exhausted, fell asleep without bedtime ointment' : '1/4 inch ribbon into lower fornix',
     });
   }
 
-  // Realistic EBMD Episodes (correlated closely with missed night ointment or dry ceiling fan!)
-  // Episode 1: 20 days ago (morning sharp tear after missed ointment d=21)
-  const epDate1 = new Date(now.getTime() - 20 * 24 * 60 * 60 * 1000);
+  // Realistic EBMD Episodes across 3 time tiers:
+  // --- TIER 1: PAST 30 DAYS (4 episodes) ---
+
+  // Episode 1: 3 days ago (major waking erosion requiring clinic visit)
+  const epDate1 = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
   episodes.push({
-    id: 'ep_1',
-    timestamp: `${epDate1.toISOString().split('T')[0]}T06:40:00.000Z`,
-    eye: 'OS', // Left Eye
-    severity: 4,
-    symptoms: ['sharp_waking_tear', 'pain', 'photophobia', 'excessive_tearing'],
-    trigger: 'Waking up / opening eye (missed ointment night before)',
-    actionTaken: 'Kept eye firmly shut 20 min, instilled chilled preservative-free tears, cold compress',
-    notes: 'Severe sharp pulling pain upon alarm ringing. Left eye eyelid stuck to epithelial flap. Photophobia lasted 4 hours.',
-    durationMinutes: 240,
+    id: 'ep_4',
+    timestamp: `${epDate1.toISOString().split('T')[0]}T06:15:00.000Z`,
+    eye: 'OD',
+    severity: 5,
+    symptoms: ['sharp_waking_tear', 'pain', 'hospital_debridement', 'photophobia', 'excessive_tearing'],
+    trigger: 'Woke up, rubbed right eye accidentally before full waking',
+    actionTaken: 'Walk-in cornea specialist clinic: fluorescein stain showed 2mm epithelial defect, loose flap debrided, Bandage Contact Lens (BCL) placed',
+    notes: 'Very painful RCE episode. Doctor prescribed Vigamox drops + BCL for 6 days.',
+    durationMinutes: 480,
+    weather: { tempC: 18, tempF: 64, humidity: 29, weatherDesc: 'Dry Indoor Air (<30% RH)' },
   });
 
-  // Episode 2: 15 days ago (afternoon gritty feeling)
-  const epDate2 = new Date(now.getTime() - 15 * 24 * 60 * 60 * 1000);
-  episodes.push({
-    id: 'ep_2',
-    timestamp: `${epDate2.toISOString().split('T')[0]}T15:20:00.000Z`,
-    eye: 'OU',
-    severity: 2,
-    symptoms: ['gritty_sandy', 'blurry_vision', 'foreign_body'],
-    trigger: 'Air conditioning / 6 hrs computer screen time',
-    actionTaken: 'Systane PF drops + 15 min rest away from monitor',
-    notes: 'Both eyes scratchy like sand under upper eyelids.',
-    durationMinutes: 60,
-  });
-
-  // Episode 3: 11 days ago (another wake-up erosion after missed ointment d=12)
-  const epDate3 = new Date(now.getTime() - 11 * 24 * 60 * 60 * 1000);
+  // Episode 2: 11 days ago (wake-up erosion after missed ointment d=12)
+  const epDate2 = new Date(now.getTime() - 11 * 24 * 60 * 60 * 1000);
   episodes.push({
     id: 'ep_3',
-    timestamp: `${epDate3.toISOString().split('T')[0]}T07:05:00.000Z`,
+    timestamp: `${epDate2.toISOString().split('T')[0]}T07:05:00.000Z`,
     eye: 'OS',
     severity: 3,
     symptoms: ['sharp_waking_tear', 'pain', 'blurry_vision'],
@@ -268,26 +261,123 @@ export function generateSampleData(): {
     actionTaken: 'Muro 128 drops + sunglasses indoors',
     notes: 'Pain level 6/10 initially, eased to 3/10 after 1 hour.',
     durationMinutes: 120,
+    weather: { tempC: 20, tempF: 68, humidity: 32, weatherDesc: 'Dry Air Draft' },
   });
 
-  // Episode 4: 3 days ago (major erosion leading to eye clinic visit)
-  const epDate4 = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
+  // Episode 3: 15 days ago (afternoon gritty feeling)
+  const epDate3 = new Date(now.getTime() - 15 * 24 * 60 * 60 * 1000);
   episodes.push({
-    id: 'ep_4',
-    timestamp: `${epDate4.toISOString().split('T')[0]}T06:15:00.000Z`,
-    eye: 'OD', // Right Eye
-    severity: 5,
-    symptoms: ['sharp_waking_tear', 'pain', 'hospital_debridement', 'photophobia', 'excessive_tearing'],
-    trigger: 'Woke up, rubbed right eye accidentally before full waking',
-    actionTaken: 'Walk-in cornea specialist clinic: fluorescein stain showed 2mm epithelial defect, loose flap debrided, Bandage Contact Lens (BCL) placed',
-    notes: 'Very painful RCE episode. Doctor prescribed Vigamox drops + BCL for 6 days.',
-    durationMinutes: 480,
+    id: 'ep_2',
+    timestamp: `${epDate3.toISOString().split('T')[0]}T15:20:00.000Z`,
+    eye: 'OU',
+    severity: 2,
+    symptoms: ['gritty_sandy', 'blurry_vision', 'foreign_body'],
+    trigger: 'Air conditioning / 8.5 hrs computer screen time',
+    actionTaken: 'Systane PF drops + 15 min rest away from monitor',
+    notes: 'Both eyes scratchy like sand under upper eyelids.',
+    durationMinutes: 60,
+    weather: { tempC: 22, tempF: 72, humidity: 45, weatherDesc: 'Optimal Ambient Air' },
   });
 
-  // Sample Expenses
+  // Episode 4: 20 days ago (morning sharp tear after missed ointment d=21)
+  const epDate4 = new Date(now.getTime() - 20 * 24 * 60 * 60 * 1000);
+  episodes.push({
+    id: 'ep_1',
+    timestamp: `${epDate4.toISOString().split('T')[0]}T06:40:00.000Z`,
+    eye: 'OS',
+    severity: 4,
+    symptoms: ['sharp_waking_tear', 'pain', 'photophobia', 'excessive_tearing'],
+    trigger: 'Waking up / opening eye (missed ointment night before)',
+    actionTaken: 'Kept eye firmly shut 20 min, instilled chilled preservative-free tears, cold compress',
+    notes: 'Severe sharp pulling pain upon alarm ringing. Left eye eyelid stuck to epithelial flap. Photophobia lasted 4 hours.',
+    durationMinutes: 240,
+    weather: { tempC: 17, tempF: 62, humidity: 28, weatherDesc: 'Low Humidity Cold Snap' },
+  });
+
+  // --- TIER 2: 31 TO 90 DAYS (3 additional episodes, bringing 90d total to 7) ---
+
+  // Episode 5: 42 days ago
+  const epDate5 = new Date(now.getTime() - 42 * 24 * 60 * 60 * 1000);
+  episodes.push({
+    id: 'ep_5',
+    timestamp: `${epDate5.toISOString().split('T')[0]}T06:50:00.000Z`,
+    eye: 'OS',
+    severity: 4,
+    symptoms: ['sharp_waking_tear', 'pain', 'photophobia'],
+    trigger: 'Waking up / missed night ointment d=43',
+    actionTaken: 'Rest in dark room, preservative-free tears every 30 minutes',
+    notes: 'Classic waking shear on left eye basement membrane.',
+    durationMinutes: 180,
+    weather: { tempC: 19, tempF: 66, humidity: 30, weatherDesc: 'Dry Indoor Heating' },
+  });
+
+  // Episode 6: 65 days ago
+  const epDate6 = new Date(now.getTime() - 65 * 24 * 60 * 60 * 1000);
+  episodes.push({
+    id: 'ep_6',
+    timestamp: `${epDate6.toISOString().split('T')[0]}T16:10:00.000Z`,
+    eye: 'OD',
+    severity: 2,
+    symptoms: ['gritty_sandy', 'foreign_body', 'photophobia'],
+    trigger: 'Long office screen day without hourly breaks',
+    actionTaken: 'Lubricating ointment application + eye rest',
+    notes: 'Mild irritation on right eye ridge.',
+    durationMinutes: 90,
+    weather: { tempC: 21, tempF: 70, humidity: 48, weatherDesc: 'Moderate Humidity' },
+  });
+
+  // Episode 7: 82 days ago
+  const epDate7 = new Date(now.getTime() - 82 * 24 * 60 * 60 * 1000);
+  episodes.push({
+    id: 'ep_7',
+    timestamp: `${epDate7.toISOString().split('T')[0]}T07:15:00.000Z`,
+    eye: 'OS',
+    severity: 3,
+    symptoms: ['sharp_waking_tear', 'pain', 'excessive_tearing'],
+    trigger: 'Ceiling fan breeze dried eyelid overnight',
+    actionTaken: 'Hypertonic saline drops + cold compress',
+    notes: 'Sharp wake-up pulling pain on left cornea.',
+    durationMinutes: 110,
+    weather: { tempC: 16, tempF: 61, humidity: 27, weatherDesc: 'Dry Drafty Air' },
+  });
+
+  // --- TIER 3: 91 TO 120 DAYS (2 older history episodes, bringing all-time total to 9) ---
+
+  // Episode 8: 105 days ago (early recurrent corneal erosion before regular routine)
+  const epDate8 = new Date(now.getTime() - 105 * 24 * 60 * 60 * 1000);
+  episodes.push({
+    id: 'ep_8',
+    timestamp: `${epDate8.toISOString().split('T')[0]}T06:30:00.000Z`,
+    eye: 'OS',
+    severity: 5,
+    symptoms: ['sharp_waking_tear', 'pain', 'hospital_debridement', 'excessive_tearing'],
+    trigger: 'Morning opening after missed bedtime ointment',
+    actionTaken: 'Cornea specialist clinic: slit lamp examination diagnosed EBMD / Map-Dot-Fingerprint dystrophy, placed bandage contact lens',
+    notes: 'Major erosion that established formal diagnosis of EBMD.',
+    durationMinutes: 520,
+    weather: { tempC: 15, tempF: 59, humidity: 24, weatherDesc: 'Severe Low Humidity' },
+  });
+
+  // Episode 9: 118 days ago (first recognized recurring tear)
+  const epDate9 = new Date(now.getTime() - 118 * 24 * 60 * 60 * 1000);
+  episodes.push({
+    id: 'ep_9',
+    timestamp: `${epDate9.toISOString().split('T')[0]}T06:10:00.000Z`,
+    eye: 'OS',
+    severity: 4,
+    symptoms: ['sharp_waking_tear', 'pain', 'photophobia'],
+    trigger: 'Opening eyes rapidly upon morning alarm',
+    actionTaken: 'Closed eyes for 45 minutes, dark room',
+    notes: 'Initial sharp pulling sensation in left eye upon sudden waking.',
+    durationMinutes: 200,
+    weather: { tempC: 17, tempF: 63, humidity: 31, weatherDesc: 'Dry Morning Air' },
+  });
+
+  // Sample Expenses spanning 120 days
   const expDate1 = new Date(now.getTime() - 25 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-  const expDate2 = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-  const expDate3 = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  const expDate2 = new Date(now.getTime() - 55 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  const expDate3 = new Date(now.getTime() - 85 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  const expDate4 = new Date(now.getTime() - 105 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
   expenses.push(
     {
@@ -323,6 +413,16 @@ export function generateSampleData(): {
     {
       id: 'exp_4',
       date: expDate3,
+      productName: 'Muro 128 5% Drops (15mL)',
+      category: 'drops',
+      price: 24.95,
+      quantity: 1,
+      store: 'CVS Pharmacy',
+      notes: 'Morning hypertonic drops for daytime epithelial adherence.',
+    },
+    {
+      id: 'exp_5',
+      date: expDate4,
       productName: 'Cornea Specialist Urgent Visit Copay + Fluorescein',
       category: 'doctor_visit',
       price: 50.0,
@@ -449,20 +549,30 @@ export function saveSettings(settings: AppSettings) {
   }
 }
 
-// Initial Bootstrap Check: if empty, seed with sample data so user immediately sees value
+// Initial Bootstrap Check: if empty or legacy 4-episode dataset, seed with rich 120-day data so 30D / 90D / All Days immediately show dynamic metrics
 export function initStorageIfEmpty(): { isFirstRun: boolean } {
   try {
-    const isInitialized = localStorage.getItem(STORAGE_KEYS.INITIALIZED);
-    if (!isInitialized) {
-      const sample = generateSampleData();
-      saveEpisodes(sample.episodes);
-      saveTreatments(sample.treatments);
-      saveExpenses(sample.expenses);
-      saveRoutines(DEFAULT_ROUTINES);
-      saveReminders(DEFAULT_REMINDERS);
-      saveSettings(DEFAULT_SETTINGS);
+    const isV2 = localStorage.getItem('ebmd_initialized_v2');
+    if (!isV2) {
+      const existing = loadEpisodes();
+      // Check if existing data is either empty or exclusively the original 4 sample episodes
+      const isLegacySample =
+        existing.length === 0 ||
+        (existing.length <= 4 &&
+          existing.every((e) => ['ep_1', 'ep_2', 'ep_3', 'ep_4'].includes(e.id)));
+
+      if (isLegacySample) {
+        const sample = generateSampleData();
+        saveEpisodes(sample.episodes);
+        saveTreatments(sample.treatments);
+        saveExpenses(sample.expenses);
+        if (!localStorage.getItem(STORAGE_KEYS.ROUTINES)) saveRoutines(DEFAULT_ROUTINES);
+        if (!localStorage.getItem(STORAGE_KEYS.REMINDERS)) saveReminders(DEFAULT_REMINDERS);
+        if (!localStorage.getItem(STORAGE_KEYS.SETTINGS)) saveSettings(DEFAULT_SETTINGS);
+      }
+      localStorage.setItem('ebmd_initialized_v2', 'true');
       localStorage.setItem(STORAGE_KEYS.INITIALIZED, 'true');
-      return { isFirstRun: true };
+      return { isFirstRun: isLegacySample };
     }
     return { isFirstRun: false };
   } catch {

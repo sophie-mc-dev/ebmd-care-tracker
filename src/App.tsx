@@ -39,7 +39,6 @@ import { SettingsHub, SettingsSection } from './components/SettingsHub';
 import { QuickEpisodeModal } from './components/QuickEpisodeModal';
 import { QuickTreatmentModal } from './components/QuickTreatmentModal';
 import { DoctorReportModal } from './components/DoctorReportModal';
-import { SettingsBackupModal } from './components/SettingsBackupModal';
 import { sound } from './utils/audio';
 
 export default function App() {
@@ -72,7 +71,6 @@ export default function App() {
   const [preselectedTreatmentAnchor, setPreselectedTreatmentAnchor] = useState<RoutineAnchor | undefined>();
 
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
-  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
 
   // Initialize data on mount
   const refreshAllState = useCallback(() => {
@@ -323,7 +321,6 @@ export default function App() {
         isDark={isDarkTheme}
         onToggleTheme={handleToggleTheme}
         onOpenReport={() => setIsReportModalOpen(true)}
-        onOpenSettings={() => setIsSettingsModalOpen(true)}
         onQuickEpisode={openNewEpisode}
       />
 
@@ -396,6 +393,7 @@ export default function App() {
             onSaveExpense={handleSaveExpense}
             onDeleteExpense={handleDeleteExpense}
             onDataReset={refreshAllState}
+            onOpenReport={() => setIsReportModalOpen(true)}
           />
         )}
       </main>
@@ -435,15 +433,6 @@ export default function App() {
         treatments={treatments}
         expenses={expenses}
         settings={settings}
-      />
-
-      <SettingsBackupModal
-        isOpen={isSettingsModalOpen}
-        onClose={() => setIsSettingsModalOpen(false)}
-        settings={settings}
-        onUpdateSettings={handleUpdateSettings}
-        onDataReset={refreshAllState}
-        onNavigateToProducts={openProductsSettings}
       />
     </div>
   );

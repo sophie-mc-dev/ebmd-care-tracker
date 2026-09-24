@@ -1,29 +1,20 @@
 import React, { useState, useMemo } from 'react';
 import {
   FileText,
-  Printer,
   Copy,
   Check,
   X,
-  Calendar,
-  ShieldCheck,
-  AlertTriangle,
   Download,
-  Share2,
-  Eye,
-  DollarSign,
-  CloudSun,
-  Monitor,
-  Camera,
+  AlertCircle,
+  Loader2,
 } from 'lucide-react';
-import { EpisodeLog, TreatmentLog, ExpenseItem, AppSettings } from '../types/ebmd';
+import { EpisodeLog, TreatmentLog, ExpenseItem, AppSettings, ReportRange } from '../types/ebmd';
 import {
   getSeverityLabel,
-  getEyeLabel,
   getSymptomLabel,
   getSkipReasonLabel,
-  getAnchorLabel,
 } from '../utils/storage';
+import { downloadDoctorReportPdf } from '../utils/pdfGenerator';
 
 interface DoctorReportModalProps {
   isOpen: boolean;
@@ -33,8 +24,6 @@ interface DoctorReportModalProps {
   expenses: ExpenseItem[];
   settings: AppSettings;
 }
-
-type ReportRange = '30d' | '60d' | '90d' | '180d' | 'all';
 
 export const DoctorReportModal: React.FC<DoctorReportModalProps> = ({
   isOpen,
@@ -47,6 +36,8 @@ export const DoctorReportModal: React.FC<DoctorReportModalProps> = ({
   const [range, setRange] = useState<ReportRange>('30d');
   const [copied, setCopied] = useState(false);
   const [doctorNotes, setDoctorNotes] = useState('');
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [pdfStatusMessage, setPdfStatusMessage] = useState<string | null>(null);
 
   // Filter based on range
   const filteredData = useMemo(() => {
@@ -107,8 +98,26 @@ export const DoctorReportModal: React.FC<DoctorReportModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handlePrint = () => {
-    window.print();
+  const handleDownloadPdf = () => {
+    setIsGeneratingPdf(true);
+    setPdfStatusMessage(null);
+    try {
+      downloadDoctorReportPdf({
+        episodes: filteredEpisodes,
+        treatments: filteredTreatments,
+        expenses: filteredExpenses,
+        settings,
+        range,
+        doctorNotes,
+      });
+      setPdfStatusMessage('PDF report generated and saved to your device!');
+      setTimeout(() => setPdfStatusMessage(null), 5000);
+    } catch (err) {
+      console.error('PDF export error:', err);
+      setPdfStatusMessage('Failed to download PDF. Please try again.');
+    } finally {
+      setIsGeneratingPdf(false);
+    }
   };
 
   const handleCopySummary = () => {
@@ -149,70 +158,104 @@ export const DoctorReportModal: React.FC<DoctorReportModalProps> = ({
     setTimeout(() => setCopied(false), 2500);
   };
 
+  const configuredProductNames = settings.configuredProducts
+    ? Object.values(settings.configuredProducts)
+        .flatMap((list) => list)
+        .filter(Boolean)
+        .join(', ')
+    : 'Muro 128 5% Ointment (Bedtime), Preservative-Free Artificial Tears (Midday/After lunch), Daytime Hypertonic Saline Drops (Upon waking).';
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-2 sm:p-4 overflow-y-auto animate-in fade-in">
-      <div className="w-full max-w-3xl rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl max-h-[95vh] flex flex-col overflow-hidden">
+    <div className="report-modal-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-2 sm:p-4 overflow-y-auto animate-in fade-in">
+      <div className="report-modal-card w-full max-w-3xl rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl max-h-[95vh] flex flex-col overflow-hidden">
         {/* Modal Top Control Bar (Hidden when printing via CSS) */}
-        <div className="print:hidden flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40">
+        <div className="print:hidden flex flex-wrap items-center justify-between gap-3 px-5 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center font-bold">
+            <div className="w-9 h-9 rounded-xl bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center font-bold flex-shrink-0">
               <FileText className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-slate-900 dark:text-white">
-                Ophthalmology Appointment Summary
+              <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white leading-tight">
+                Ophthalmology Clinical Report
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Formatted clinical report for corneal specialist
+                Formatted record for corneal specialist appointments
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            {/* Primary Download PDF Action */}
             <button
-              onClick={handlePrint}
-              className="px-3.5 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-sm min-h-[38px]"
+              onClick={handleDownloadPdf}
+              disabled={isGeneratingPdf}
+              className="px-3 sm:px-3.5 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 active:scale-95 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-sm min-h-[38px] disabled:opacity-50"
+              title="Generate and download a clinical PDF file"
             >
-              <Printer className="w-3.5 h-3.5" />
-              <span>Print / PDF</span>
+              {isGeneratingPdf ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Download className="w-3.5 h-3.5" />
+              )}
+              <span>{isGeneratingPdf ? 'Generating...' : 'Save PDF'}</span>
             </button>
 
+            {/* Copy portal text */}
             <button
               onClick={handleCopySummary}
-              className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 text-xs font-medium transition flex items-center gap-1.5 min-h-[38px]"
+              className="px-2.5 sm:px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 text-xs font-medium transition flex items-center gap-1.5 min-h-[38px]"
+              title="Copy clinical text to clipboard for patient portal message"
             >
               {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
-              <span>{copied ? 'Copied!' : 'Copy Portal Text'}</span>
+              <span className="hidden sm:inline">{copied ? 'Copied!' : 'Copy Text'}</span>
             </button>
 
+            {/* Close modal */}
             <button
               onClick={onClose}
-              className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition"
+              aria-label="Close report"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
         </div>
 
+        {/* Feedback Alert for PDF Status */}
+        {pdfStatusMessage && (
+          <div className="print:hidden px-5 py-2.5 bg-emerald-50 dark:bg-emerald-950/40 border-b border-emerald-200 dark:border-emerald-800/40 text-emerald-800 dark:text-emerald-200 text-xs flex items-center justify-between animate-in fade-in">
+            <div className="flex items-center gap-2">
+              <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+              <span className="font-medium">{pdfStatusMessage}</span>
+            </div>
+            <button
+              onClick={() => setPdfStatusMessage(null)}
+              className="text-emerald-600 hover:text-emerald-800 dark:text-emerald-400 p-0.5"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+
         {/* Range Selector (Hidden when printing) */}
-        <div className="print:hidden px-6 py-2.5 bg-slate-100/60 dark:bg-slate-800/20 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
-          <span className="font-semibold text-slate-600 dark:text-slate-400">Timeframe:</span>
+        <div className="print:hidden px-5 sm:px-6 py-2.5 bg-slate-100/60 dark:bg-slate-800/20 border-b border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2 text-xs">
+          <span className="font-semibold text-slate-600 dark:text-slate-400">Reporting Timeframe:</span>
           <div className="flex items-center gap-1">
             {(
               [
-                { id: '30d', label: 'Past 30 Days' },
-                { id: '60d', label: 'Past 60 Days' },
-                { id: '90d', label: 'Past 90 Days' },
-                { id: '180d', label: 'Past 6 Months' },
+                { id: '30d', label: '30 Days' },
+                { id: '60d', label: '60 Days' },
+                { id: '90d', label: '90 Days' },
+                { id: '180d', label: '6 Months' },
                 { id: 'all', label: 'All History' },
               ] as const
             ).map((item) => (
               <button
                 key={item.id}
                 onClick={() => setRange(item.id)}
-                className={`px-2.5 py-1 rounded-lg font-bold transition ${
+                className={`px-2.5 py-1 rounded-lg font-bold transition text-xs ${
                   range === item.id
-                    ? 'bg-teal-600 text-white'
+                    ? 'bg-teal-600 text-white shadow-xs'
                     : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
                 }`}
               >
@@ -240,7 +283,7 @@ export const DoctorReportModal: React.FC<DoctorReportModalProps> = ({
               </div>
               <div className="text-right text-xs text-slate-500 print:text-slate-600">
                 <div>Date: {new Date().toLocaleDateString()}</div>
-                <div>App: EBMD Tracker PWA</div>
+                <div>App: EBMD Tracker</div>
               </div>
             </div>
 
@@ -255,13 +298,13 @@ export const DoctorReportModal: React.FC<DoctorReportModalProps> = ({
               <div>
                 <span className="block text-[10px] font-bold text-slate-400 uppercase">Clinician</span>
                 <span className="font-bold text-slate-800 dark:text-slate-200 print:text-black">
-                  {settings.doctorName || 'Cornea Specialist / Ophthalmologist'}
+                  {settings.doctorName || 'Cornea Specialist / MD'}
                 </span>
               </div>
               <div>
                 <span className="block text-[10px] font-bold text-slate-400 uppercase">Clinic</span>
                 <span className="font-bold text-slate-800 dark:text-slate-200 print:text-black">
-                  {settings.clinicName || 'Eye Care Clinic'}
+                  {settings.clinicName || 'Eye Care Practice'}
                 </span>
               </div>
               <div>
@@ -274,24 +317,24 @@ export const DoctorReportModal: React.FC<DoctorReportModalProps> = ({
           </div>
 
           {/* Section 1: Executive Clinical Summary Box */}
-          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 print:bg-slate-100 border border-slate-200 dark:border-slate-700 space-y-3">
+          <div className="print-avoid-break p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 print:bg-slate-100 border border-slate-200 dark:border-slate-700 space-y-3">
             <h2 className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 print:text-black">
               1. Executive Clinical Summary
             </h2>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
-              <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 print:bg-white border border-slate-200 dark:border-slate-700">
+              <div className="print-avoid-break p-2.5 rounded-xl bg-white dark:bg-slate-900 print:bg-white border border-slate-200 dark:border-slate-700">
                 <div className="text-xl font-black text-rose-600 print:text-rose-700">{totalEpisodes}</div>
                 <div className="text-[10px] font-bold text-slate-500 uppercase">Total Episodes</div>
               </div>
-              <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 print:bg-white border border-slate-200 dark:border-slate-700">
+              <div className="print-avoid-break p-2.5 rounded-xl bg-white dark:bg-slate-900 print:bg-white border border-slate-200 dark:border-slate-700">
                 <div className="text-xl font-black text-orange-600 print:text-orange-700">{severeEpisodes}</div>
                 <div className="text-[10px] font-bold text-slate-500 uppercase">Level 4-5 Severe Tears</div>
               </div>
-              <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 print:bg-white border border-slate-200 dark:border-slate-700">
+              <div className="print-avoid-break p-2.5 rounded-xl bg-white dark:bg-slate-900 print:bg-white border border-slate-200 dark:border-slate-700">
                 <div className="text-xl font-black text-teal-600 print:text-teal-700">{adherenceRate}%</div>
                 <div className="text-[10px] font-bold text-slate-500 uppercase">Overall Adherence</div>
               </div>
-              <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 print:bg-white border border-slate-200 dark:border-slate-700">
+              <div className="print-avoid-break p-2.5 rounded-xl bg-white dark:bg-slate-900 print:bg-white border border-slate-200 dark:border-slate-700">
                 <div className="text-xl font-black text-indigo-600 print:text-indigo-700">{nightAdherence}%</div>
                 <div className="text-[10px] font-bold text-slate-500 uppercase">Bedtime Ointment</div>
               </div>
@@ -318,7 +361,7 @@ export const DoctorReportModal: React.FC<DoctorReportModalProps> = ({
             </p>
           </div>
 
-          {/* Section 2: Chronological Episode Log Table with Photos and Weather */}
+          {/* Section 2: Chronological Episode Log Table */}
           <div className="space-y-2">
             <h2 className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 print:text-black">
               2. Episodes & Recurrent Erosions Chronicle ({filteredEpisodes.length})
@@ -348,7 +391,7 @@ export const DoctorReportModal: React.FC<DoctorReportModalProps> = ({
                       const timeStr = dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
                       return (
-                        <tr key={ep.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                        <tr key={ep.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 print-avoid-break">
                           <td className="p-2.5 font-medium whitespace-nowrap">
                             <div>{dateStr}</div>
                             <div className="text-[10px] text-slate-400">{timeStr}</div>
@@ -408,13 +451,13 @@ export const DoctorReportModal: React.FC<DoctorReportModalProps> = ({
           </div>
 
           {/* Section 3: Daily Routine & Missed Doses Log */}
-          <div className="space-y-2">
+          <div className="print-avoid-break space-y-2">
             <h2 className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 print:text-black">
               3. Treatment Regimen & Skipped Doses Audit
             </h2>
             <div className="text-xs text-slate-600 dark:text-slate-300 space-y-1">
               <p>
-                <strong>Current Documented Products:</strong> Muro 128 5% Ointment (Bedtime), Preservative-Free Artificial Tears (Midday/After lunch), Daytime Hypertonic Saline Drops (Upon waking).
+                <strong>Current Configured Products:</strong> {configuredProductNames}
               </p>
               {skippedTreatments > 0 && (
                 <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-900 dark:text-amber-200 print:text-black text-xs">
@@ -432,21 +475,28 @@ export const DoctorReportModal: React.FC<DoctorReportModalProps> = ({
           </div>
 
           {/* Section 4: Patient Questions / Notes for Clinician */}
-          <div className="space-y-2 print:hidden">
-            <label className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300">
+          <div className="print-avoid-break space-y-2">
+            <label className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 print:text-black">
               4. Questions / Topics to Discuss with Doctor
             </label>
-            <textarea
-              rows={3}
-              placeholder="e.g. Ask about autologous serum tears, PTK (phototherapeutic keratectomy), amniotic membrane, or nightly moisture chamber goggles..."
-              value={doctorNotes}
-              onChange={(e) => setDoctorNotes(e.target.value)}
-              className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs focus:ring-2 focus:ring-teal-500"
-            />
+            <div className="print:hidden">
+              <textarea
+                rows={3}
+                placeholder="e.g. Ask about autologous serum tears, PTK (phototherapeutic keratectomy), amniotic membrane, or nightly moisture chamber goggles..."
+                value={doctorNotes}
+                onChange={(e) => setDoctorNotes(e.target.value)}
+                className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs focus:ring-2 focus:ring-teal-500 text-slate-800 dark:text-slate-100 placeholder:text-slate-400"
+              />
+            </div>
+            {doctorNotes.trim() && (
+              <div className="hidden print:block p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-black whitespace-pre-line">
+                {doctorNotes.trim()}
+              </div>
+            )}
           </div>
 
           {/* Clinician Signature line when printed */}
-          <div className="hidden print:block pt-8 border-t border-slate-300 mt-6 text-xs">
+          <div className="print-avoid-break hidden print:block pt-8 border-t border-slate-300 mt-6 text-xs">
             <div className="flex justify-between items-end">
               <div>
                 <div className="w-56 border-b border-black mb-1" />
@@ -462,4 +512,3 @@ export const DoctorReportModal: React.FC<DoctorReportModalProps> = ({
     </div>
   );
 };
-
